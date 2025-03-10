@@ -65,9 +65,10 @@ void emCleanup(struct emulator *em, int exitStatus)
     exit(exitStatus);
 }
 
-int chip8Initialize(chip8mem* chip8)
+int chip8Initialize(chip8mem* chip8, char romName)
 {
     uint32_t entryPoint = 0x200;
+    chip8->pc = entryPoint;
     uint8_t font[] = 
     {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -88,12 +89,31 @@ int chip8Initialize(chip8mem* chip8)
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
     memcpy(&chip8->ram[0], font, sizeof(font));
-    FILE* rom = fopen(chip8->romName, "rb");
+    FILE* rom = fopen(romName, "rb");
     if(!rom)
     {
         printf("ROM could not be loaded\n");
         return 1;
     }
+    fseek(rom, 0, SEEK_END);
+    const size_t rom_size = ftell(rom);
+    const size_t max_size = sizeof chip8->ram - entryPoint;
+    rewind(rom);
+
+    if (rom_size > max_size) 
+    {
+        SDL_Log("Rom file %s is too big! Rom size: %llu, Max size allowed: %llu\n", 
+                romName, (long long unsigned)rom_size, (long long unsigned)max_size);
+        return 1;
+    }
+    
+    if (fread(&chip8->ram[entryPoint], rom_size, 1, rom) != 1) //Loading ROM
+    {
+        SDL_Log("Could not read Rom file %s into CHIP8 memory\n", 
+                romName);
+        return 1;
+    }
+    fclose(rom);
 }
 
 int main()
@@ -126,6 +146,7 @@ int main()
                 break;
             }
         }
+        emulateInstruction(&em);
         SDL_RenderClear(em.renderer);
         /*SDL_SetRenderDrawColor(em.renderer, 255, 0, 0, 255);
         SDL_RenderClear(em.renderer);   //Changes colour to red
