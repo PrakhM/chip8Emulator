@@ -33,11 +33,12 @@ int sdlInitialize(struct emulator *em)
     return 0;
 }
 
-void emCleanup(struct emulator *em)
+void emCleanup(struct emulator *em, int exitStatus)
 {
     SDL_DestroyRenderer(em->renderer);
     SDL_DestroyWindow(em->window);
     SDL_Quit();
+    exit(exitStatus);
 }
 
 int main()
@@ -45,15 +46,38 @@ int main()
     struct emulator em;
     em.window = NULL;
     em.renderer = NULL;
-    printf("Hello World!\n");
     if(sdlInitialize(&em))
     {
         printf("Error\n");
-        emCleanup(&em);
+        emCleanup(&em, EXIT_FAILURE);
         exit(1);
     }
-    SDL_Delay(5000);
-    emCleanup(&em);
-    printf("Success\n");
+    while (1) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+            case SDL_QUIT:
+                emCleanup(&em, EXIT_SUCCESS);
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.scancode) {
+                case SDL_SCANCODE_ESCAPE:
+                    emCleanup(&em, EXIT_SUCCESS);
+                    break;
+                default:
+                    break;
+                }
+            default:
+                break;
+            }
+        }
+        SDL_RenderClear(em.renderer);
+
+        SDL_RenderPresent(em.renderer);
+
+        SDL_Delay(16);
+    }
+
+    emCleanup(&em, EXIT_SUCCESS); 
     return 0;
 }
