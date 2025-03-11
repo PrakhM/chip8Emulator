@@ -149,7 +149,13 @@ emulateInstruction(chip8mem* chip8)
                 memset(&chip8->display[0], 0, sizeof(chip8->display));
                 chip8->pc = chip8->stack[chip8->stack_ptr--];
             }
+            break;
         case 0x01:
+            chip8->pc = chip8->inst.nnn;
+            break;
+        case 0x02:
+            chip8->stack_ptr++;
+            chip8->stack[chip8->stack_ptr] = chip8->pc;
             chip8->pc = chip8->inst.nnn;
     }
 }
