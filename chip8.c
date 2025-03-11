@@ -39,8 +39,10 @@ typedef struct
     uint8_t delayTimer; //When non zero, decremented at 60Hz
     uint16_t pc;
     uint16_t stack[16];
+    uint8_t stack_ptr;
     int keypad[16];
     instructions inst;
+    uint8_t display[64*32];
 } chip8mem;
 
 
@@ -125,12 +127,31 @@ int chip8Initialize(chip8mem* chip8, char romName)
     }
     chip8->romName = romName;
     fclose(rom);
+    chip8->stack_ptr = -1;
 }
 
 emulateInstruction(chip8mem* chip8)
 {
     chip8->inst.opcode = (chip8->ram[chip8->pc] << 8) | chip8->ram[chip8->pc+1];
     chip8->pc += 2;
+
+    chip8->inst.nnn = chip8->inst.opcode & 0x0FFF;
+    chip8->inst.kk = chip8->inst.opcode & 0x0FF;
+    chip8->inst.n = chip8->inst.opcode & 0x0F;
+    chip8->inst.x = (chip8->inst.opcode >> 8) & 0x0F;
+    chip8->inst.y = (chip8->inst.opcode >> 4) & 0x0F;
+
+    switch((chip8->inst.opcode>>12))
+    {
+        case 0x0:
+            if(chip8->inst.kk == 0XE0)
+            {
+                memset(&chip8->display[0], 0, sizeof(chip8->display));
+                chip8->pc = chip8->stack[chip8->stack_ptr--];
+            }
+        case 0x01:
+            chip8->pc = chip8->inst.nnn;
+    }
 }
 
 int main()
