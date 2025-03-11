@@ -21,6 +21,16 @@ typedef struct {
 
 typedef struct
 {
+    uint16_t opcode;
+    uint16_t nnn; //12 byte
+    uint8_t n; //4 byte
+    uint8_t x; //4 byte
+    uint8_t y; //4 byte
+    uint8_t kk; //8 byte
+} instructions;
+
+typedef struct
+{
     char romName;
     uint8_t ram[4096];
     uint8_t V[16]; //last reg (VF) not to be used by anything else
@@ -30,8 +40,8 @@ typedef struct
     uint16_t pc;
     uint16_t stack[16];
     int keypad[16];
+    instructions inst;
 } chip8mem;
-
 
 
 int sdlInitialize(struct emulator *em)
@@ -113,7 +123,14 @@ int chip8Initialize(chip8mem* chip8, char romName)
                 romName);
         return 1;
     }
+    chip8->romName = romName;
     fclose(rom);
+}
+
+emulateInstruction(chip8mem* chip8)
+{
+    chip8->inst.opcode = (chip8->ram[chip8->pc] << 8) | chip8->ram[chip8->pc+1];
+    chip8->pc += 2;
 }
 
 int main()
