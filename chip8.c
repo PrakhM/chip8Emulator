@@ -31,7 +31,7 @@ typedef struct
 
 typedef struct
 {
-    char romName;
+    char *romName;
     uint8_t ram[4096];
     uint8_t V[16]; //last reg (VF) not to be used by anything else
     uint16_t I;
@@ -77,7 +77,7 @@ void emCleanup(struct emulator *em, int exitStatus)
     exit(exitStatus);
 }
 
-int chip8Initialize(chip8mem* chip8, char romName)
+int chip8Initialize(chip8mem* chip8, char romName[])
 {
     uint32_t entryPoint = 0x200;
     chip8->pc = entryPoint;
@@ -128,9 +128,10 @@ int chip8Initialize(chip8mem* chip8, char romName)
     chip8->romName = romName;
     fclose(rom);
     chip8->stack_ptr = -1;
+    return 0;
 }
 
-emulateInstruction(chip8mem* chip8)
+void emulateInstruction(chip8mem* chip8)
 {
     chip8->inst.opcode = (chip8->ram[chip8->pc] << 8) | chip8->ram[chip8->pc+1];
     chip8->pc += 2;
@@ -140,13 +141,16 @@ emulateInstruction(chip8mem* chip8)
     chip8->inst.n = chip8->inst.opcode & 0x0F;
     chip8->inst.x = (chip8->inst.opcode >> 8) & 0x0F;
     chip8->inst.y = (chip8->inst.opcode >> 4) & 0x0F;
-
+    printf("%.4x\n",chip8->inst.opcode);
     switch((chip8->inst.opcode>>12))
     {
         case 0x0:
-            if(chip8->inst.kk == 0XE0)
+            if(chip8->inst.kk == 0xE0)
             {
                 memset(&chip8->display[0], 0, sizeof(chip8->display));
+            }
+            else if(chip8->inst.kk == 0xEE)
+            {
                 chip8->pc = chip8->stack[chip8->stack_ptr--];
             }
             break;
@@ -157,6 +161,67 @@ emulateInstruction(chip8mem* chip8)
             chip8->stack_ptr++;
             chip8->stack[chip8->stack_ptr] = chip8->pc;
             chip8->pc = chip8->inst.nnn;
+            break;
+        case 0x03:
+            if(chip8->inst.kk == chip8->V[chip8->inst.x]) chip8->pc+=2;
+            break;
+        case 0x04:
+            if(chip8->inst.kk != chip8->V[chip8->inst.x]) chip8->pc+=2;
+            break;
+        case 0x05:
+            if(chip8->V[chip8->inst.x] == chip8->V[chip8->inst.y]) chip8->pc+=2;
+            break;
+        case 0x06:
+            chip8->V[chip8->inst.x] = chip8->inst.kk;
+            break;
+            case 0x0A:
+            chip8->I = chip8->inst.nnn;
+            break;
+        case 0x0B:
+            chip8->pc = chip8->inst.nnn + chip8->V[0];
+            break;
+        case 0x0D:
+            int windowHeight = SCREEN_HEIGHT * SCALE_FACTOR;
+            int windowWidth = SCREEN_WIDTH * SCALE_FACTOR;
+            uint8_t xcoord = chip8->ram[chip8->inst.x] % windowHeight;
+            uint8_t ycoord = chip8->ram[chip8->inst.y] % windowWidth;
+            chip8->V[0xF] = 0;
+            for(uint8_t i = 0; i < chip8->inst.n; i++)
+            {
+                uint8_t spriteData = chip8->ram[chip8->I + i];
+                for(int8_t j = 7; j>=0; j--)
+                {   
+                    if((spriteData & (1 << j)) && chip8->display[xcoord + ycoord * windowHeight])
+                    {
+                        chip8->V[0xF] = 1;
+                    }
+                    chip8->display[xcoord + ycoord * windowHeight] ^= (spriteData & (1 << j));
+                }
+            }
+            break;
+        case 0x0F:
+            if(chip8->inst.kk == 0x07)
+            {
+                chip8->V[chip8->inst.x]= chip8->delayTimer;
+            }
+            else if(chip8->inst.kk == 0x0A)
+            {
+                SDL_Event event;
+                while( SDL_PollEvent( &event ) ){
+                    /* We are only worried about SDL_KEYDOWN and SDL_KEYUP events */
+                    switch( event.type ){
+                      case SDL_KEYDOWN:
+                        printf( "Key press detected\n" );
+                        break;
+                    }
+                }
+                
+            }
+            
+            break;
+        
+        default:
+            printf("Invalid\n");
     }
 }
 
@@ -171,6 +236,8 @@ int main()
         emCleanup(&em, EXIT_FAILURE);
         exit(1);
     }
+    chip8mem chip8;
+    chip8Initialize(&chip8, "IBM Logo.ch8");
     while (1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -190,7 +257,7 @@ int main()
                 break;
             }
         }
-        emulateInstruction(&em);
+        emulateInstruction(&chip8);
         SDL_RenderClear(em.renderer);
         /*SDL_SetRenderDrawColor(em.renderer, 255, 0, 0, 255);
         SDL_RenderClear(em.renderer);   //Changes colour to red
