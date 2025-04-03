@@ -241,8 +241,9 @@ void emulateInstruction(chip8mem* chip8)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    argc = argc;
     struct emulator em;
     em.window = NULL;
     em.renderer = NULL;
@@ -253,7 +254,7 @@ int main()
         exit(1);
     }
     chip8mem chip8;
-    chip8Initialize(&chip8, "IBM Logo.ch8");
+    chip8Initialize(&chip8, argv[1]);
     while (1) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
