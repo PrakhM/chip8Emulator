@@ -174,20 +174,22 @@ void emulateInstruction(chip8mem* chip8)
         case 0x06:
             chip8->V[chip8->inst.x] = chip8->inst.kk;
             break;
-            case 0x0A:
+        case 0x0A:
             chip8->I = chip8->inst.nnn;
             break;
         case 0x0B:
             chip8->pc = chip8->inst.nnn + chip8->V[0];
             break;
         case 0x0D:
-            int windowHeight = SCREEN_HEIGHT * SCALE_FACTOR;
-            int windowWidth = SCREEN_WIDTH * SCALE_FACTOR;
+            int windowHeight = SCREEN_HEIGHT;
+            int windowWidth = SCREEN_WIDTH;
             uint8_t xcoord = chip8->ram[chip8->inst.x] % windowHeight;
             uint8_t ycoord = chip8->ram[chip8->inst.y] % windowWidth;
+            uint8_t xOG = xcoord;
             chip8->V[0xF] = 0;
             for(uint8_t i = 0; i < chip8->inst.n; i++)
             {
+                xcoord = xOG;
                 uint8_t spriteData = chip8->ram[chip8->I + i];
                 for(int8_t j = 7; j>=0; j--)
                 {   
@@ -196,7 +198,9 @@ void emulateInstruction(chip8mem* chip8)
                         chip8->V[0xF] = 1;
                     }
                     chip8->display[xcoord + ycoord * windowHeight] ^= (spriteData & (1 << j));
+                    if(++xcoord >= windowWidth) break;
                 }
+                if(++ycoord >= windowWidth) break;
             }
             break;
         case 0x0F:
@@ -262,6 +266,22 @@ int main()
         /*SDL_SetRenderDrawColor(em.renderer, 255, 0, 0, 255);
         SDL_RenderClear(em.renderer);   //Changes colour to red
         SDL_RenderPresent(em.renderer);*/
+        SDL_Rect rect = {.x = 0, .y = 0, .w = SCALE_FACTOR, .h = SCALE_FACTOR};
+        for(uint32_t i = 0; i < sizeof(chip8.display); i++)
+        {
+            rect.x = (i % SCREEN_WIDTH) * SCALE_FACTOR;
+            rect.y = (i / SCREEN_WIDTH) * SCALE_FACTOR;
+            if(chip8.display[i])
+            {
+                SDL_SetRenderDrawColor(em.renderer, 255, 255, 255, 255);
+                SDL_RenderFillRect(em.renderer, &rect);
+            }
+            else
+            {
+                SDL_SetRenderDrawColor(em.renderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(em.renderer, &rect);
+            }
+        }
         SDL_RenderPresent(em.renderer);
 
         SDL_Delay(16);
