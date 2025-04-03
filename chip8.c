@@ -144,6 +144,13 @@ void emulateInstruction(chip8mem* chip8)
     printf("%.4x\n",chip8->inst.opcode);
     switch((chip8->inst.opcode>>12))
     {
+        /*
+        7009
+        7008
+        7004
+        7008
+        7008
+        */
         case 0x0:
             if(chip8->inst.kk == 0xE0)
             {
@@ -174,6 +181,9 @@ void emulateInstruction(chip8mem* chip8)
         case 0x06:
             chip8->V[chip8->inst.x] = chip8->inst.kk;
             break;
+        case 0x07:
+            chip8->V[chip8->inst.x] += chip8->inst.kk;
+            break;
         case 0x0A:
             chip8->I = chip8->inst.nnn;
             break;
@@ -183,8 +193,8 @@ void emulateInstruction(chip8mem* chip8)
         case 0x0D:
             int windowHeight = SCREEN_HEIGHT;
             int windowWidth = SCREEN_WIDTH;
-            uint8_t xcoord = chip8->ram[chip8->inst.x] % windowHeight;
-            uint8_t ycoord = chip8->ram[chip8->inst.y] % windowWidth;
+            uint8_t xcoord = chip8->V[chip8->inst.x] % windowWidth;
+            uint8_t ycoord = chip8->V[chip8->inst.y] % windowHeight;
             uint8_t xOG = xcoord;
             chip8->V[0xF] = 0;
             for(uint8_t i = 0; i < chip8->inst.n; i++)
@@ -193,14 +203,16 @@ void emulateInstruction(chip8mem* chip8)
                 uint8_t spriteData = chip8->ram[chip8->I + i];
                 for(int8_t j = 7; j>=0; j--)
                 {   
-                    if((spriteData & (1 << j)) && chip8->display[xcoord + ycoord * windowHeight])
+                    uint8_t *pixel = &chip8->display[xcoord + ycoord * windowWidth];
+                    int changePixel = spriteData & (1 << j);
+                    if(changePixel && *pixel)
                     {
                         chip8->V[0xF] = 1;
                     }
-                    chip8->display[xcoord + ycoord * windowHeight] ^= (spriteData & (1 << j));
+                    *pixel ^= changePixel;
                     if(++xcoord >= windowWidth) break;
                 }
-                if(++ycoord >= windowWidth) break;
+                if(++ycoord >= windowHeight) break;
             }
             break;
         case 0x0F:
