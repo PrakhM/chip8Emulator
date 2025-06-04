@@ -184,6 +184,47 @@ void emulateInstruction(chip8mem* chip8)
         case 0x07:
             chip8->V[chip8->inst.x] += chip8->inst.kk;
             break;
+        case 0x08:
+            switch(chip8->inst.n)
+            {
+                case 0x0:
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.y];
+                    break;
+                case 0x1:
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.x] | chip8->V[chip8->inst.y];
+                    break;
+                case 0x2:
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.x] & chip8->V[chip8->inst.y];
+                    break;
+                case 0x3:
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.x] ^ chip8->V[chip8->inst.y];
+                    break;
+                case 0x4:
+                    int add = chip8->V[chip8->inst.x] + chip8->V[chip8->inst.y];
+                    chip8->V[chip8->inst.x] = add;
+                    if(add > 255)chip8->V[15] = 1;
+                    else chip8->V[15] = 0;
+                    break;
+                case 0x5:
+                    if(chip8->V[chip8->inst.x] > chip8->V[chip8->inst.y]) chip8->V[15] = 1;
+                    else chip8->V[15] = 0;
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.x] - chip8->V[chip8->inst.y];
+                    break;
+                case 0x6:
+                    chip8->V[15] = (0x1 & chip8->V[chip8->inst.x]);
+                    chip8->V[chip8->inst.x] /= 2;
+                    break;
+                case 0x7:
+                    if(chip8->V[chip8->inst.y] > chip8->V[chip8->inst.x]) chip8->V[15] = 1;
+                    else chip8->V[15] = 0;
+                    chip8->V[chip8->inst.x] = chip8->V[chip8->inst.y] - chip8->V[chip8->inst.x];
+                    break;
+                case 0xE:
+                    chip8->V[15] = (0x1 & chip8->V[chip8->inst.x]);
+                    chip8->V[chip8->inst.x] *= 2;
+                    break;
+            }
+            break;
         case 0x0A:
             chip8->I = chip8->inst.nnn;
             break;
