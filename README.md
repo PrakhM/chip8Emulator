@@ -1,4 +1,4 @@
-Chip8 Emulator/Interpreter by Prakhm
+Chip8 Emulator/Interpreter by PrakhM
 ====================================
 Using the Interpreter:
 --------
